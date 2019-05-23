@@ -2904,10 +2904,8 @@ void json_print_nvme_subsystem_list(struct subsys_list_item *slist, int n)
 					slist[i].ctrls[j].state);
 			json_array_add_value_object(paths, path_attrs);
 		}
-		if (j) {
-			json_object_add_value_array(subsystem_attrs, "Paths", paths);
-		}
-
+		if (j)
+			json_object_add_value_array(subsystem_attrs, "Ctrls", paths);
 	}
 
 	if (i)
