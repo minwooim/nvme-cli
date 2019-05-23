@@ -142,11 +142,17 @@ struct list_item {
 	unsigned            block;
 };
 
+struct ns_list_item {
+	char *name;
+};
+
 struct ctrl_list_item {
 	char *name;
 	char *address;
 	char *transport;
 	char *state;
+	int ns_num;
+	struct ns_list_item *namespaces;
 };
 
 struct subsys_list_item {

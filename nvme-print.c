@@ -2845,8 +2845,15 @@ void json_sanitize_log(struct nvme_sanitize_log_page *sanitize_log, const char *
 
 static void show_nvme_ctrl(struct ctrl_list_item *item)
 {
+	int i;
+
 	printf(" +- %s %s %s %s\n", item->name, item->transport, item->address,
 	       item->state);
+	for (i = 0; i < item->ns_num; i++) {
+		if (!i)
+			printf(" \\\n");
+		printf("  +- %s\n", item->namespaces[i].name);
+	}
 }
 
 
@@ -2875,7 +2882,9 @@ void json_print_nvme_subsystem_list(struct subsys_list_item *slist, int n)
 	struct json_object *subsystem_attrs;
 	struct json_array *paths;
 	struct json_object *path_attrs;
-	int i, j;
+	struct json_array *namespaces;
+	struct json_object *ns_attrs;
+	int i, j, k;
 
 	root = json_create_object();
 	subsystems = json_create_array();
@@ -2902,6 +2911,18 @@ void json_print_nvme_subsystem_list(struct subsys_list_item *slist, int n)
 					slist[i].ctrls[j].address);
 			json_object_add_value_string(path_attrs, "State",
 					slist[i].ctrls[j].state);
+
+			namespaces = json_create_array();
+			for (k = 0; k < slist[i].ctrls[j].ns_num; k++) {
+				ns_attrs = json_create_object();
+				json_object_add_value_string(ns_attrs, "Name",
+							     slist[i].ctrls[j].namespaces[k].name);
+				json_array_add_value_object(namespaces, ns_attrs);
+			}
+			if (k)
+				json_object_add_value_array(path_attrs, "Namespaces",
+							    namespaces);
+
 			json_array_add_value_object(paths, path_attrs);
 		}
 		if (j)

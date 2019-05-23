@@ -60,6 +60,9 @@ const char *devicename;
 
 static const char nvme_version_string[] = NVME_VERSION;
 
+static void free_ctrl_list_item(struct ctrl_list_item *ctrls);
+static char *get_nvme_ctrl_attr(char *path, const char *attr);
+
 #define CREATE_CMD
 #include "nvme-builtin.h"
 
@@ -1305,6 +1308,76 @@ static void *get_registers(void)
 
 static const char *subsys_dir = "/sys/class/nvme-subsystem/";
 
+static int scan_ns_filter(const struct dirent *d)
+{
+	int id, cntlid, nsid;
+
+	if (strstr(d->d_name, "nvme")) {
+		if (sscanf(d->d_name, "nvme%dc%dn%d", &id, &cntlid, &nsid) == 3)
+			return 1;
+		if (sscanf(d->d_name, "nvme%dn%d", &id, &nsid) == 2)
+			return 1;
+	}
+
+	return 0;
+}
+
+static int get_nvme_ctrl_info(char *name, char *ctrl_path,
+			      struct ctrl_list_item *item)
+{
+	struct dirent **namespaces;
+	int ret = 0, n, i;
+
+	item->name = strdup(name);
+
+	n = scandir(ctrl_path, &namespaces, scan_ns_filter, alphasort);
+	if (n < 0) {
+		fprintf(stderr, "failed to scan namespace(s).\n");
+		return n;
+	}
+
+	item->namespaces = calloc(n, sizeof(struct ns_list_item));
+	if (!item->namespaces) {
+		ret = -ENOMEM;
+		fprintf(stderr, "failed to allocate controller namespace(s)\n");
+		goto free_namespaces;
+	}
+
+	item->ns_num = n;
+
+	for (i = 0; i < n; i++)
+		item->namespaces[i].name = strdup(namespaces[i]->d_name);
+
+	item->address = get_nvme_ctrl_attr(ctrl_path, "address");
+	if (!item->address) {
+		fprintf(stderr, "failed to get %s address.\n", name);
+		free_ctrl_list_item(item);
+		ret = -EAGAIN;
+		goto free_namespaces;
+	}
+	item->transport = get_nvme_ctrl_attr(ctrl_path, "transport");
+	if (!item->transport) {
+		fprintf(stderr, "failed to get %s transport.\n", name);
+		free_ctrl_list_item(item);
+		ret = -EAGAIN;
+		goto free_namespaces;
+	}
+	item->state = get_nvme_ctrl_attr(ctrl_path, "state");
+	if (!item->state) {
+		fprintf(stderr, "failed to get %s state.\n", name);
+		free_ctrl_list_item(item);
+		ret = -EAGAIN;
+		goto free_namespaces;
+	}
+
+free_namespaces:
+	for (i = 0; i < n; i++)
+		free(namespaces[i]);
+	free(namespaces);
+
+	return ret;
+}
+
 static char *get_nvme_subsnqn(char *path)
 {
 	char sspath[320];
@@ -1411,10 +1484,15 @@ static int scan_ctrls_filter(const struct dirent *d)
 
 static void free_ctrl_list_item(struct ctrl_list_item *ctrls)
 {
+	int i;
+
 	free(ctrls->name);
 	free(ctrls->transport);
 	free(ctrls->address);
 	free(ctrls->state);
+	for (i = 0; i < ctrls->ns_num; i++)
+		free(ctrls->namespaces[i].name);
+	free(ctrls->namespaces);
 }
 
 static int get_nvme_subsystem_info(char *name, char *path,
@@ -1447,36 +1525,14 @@ static int get_nvme_subsystem_info(char *name, char *path,
 	item->nctrls = n;
 
 	for (i = 0; i < n; i++) {
-		item->ctrls[ccnt].name = strdup(ctrls[i]->d_name);
 
 		snprintf(ctrl_path, sizeof(ctrl_path), "%s/%s", path,
-			 item->ctrls[ccnt].name);
+			 ctrls[i]->d_name);
 
-		item->ctrls[ccnt].address =
-				get_nvme_ctrl_attr(ctrl_path, "address");
-		if (!item->ctrls[ccnt].address) {
-			fprintf(stderr, "failed to get controller[%d] address.\n", i);
-			free_ctrl_list_item(&item->ctrls[ccnt]);
-			continue;
-		}
-
-		item->ctrls[ccnt].transport =
-				get_nvme_ctrl_attr(ctrl_path, "transport");
-		if (!item->ctrls[ccnt].transport) {
-			fprintf(stderr, "failed to get controller[%d] transport.\n", i);
-			free_ctrl_list_item(&item->ctrls[ccnt]);
-			continue;
-		}
-
-		item->ctrls[ccnt].state =
-				get_nvme_ctrl_attr(ctrl_path, "state");
-		if (!item->ctrls[ccnt].state) {
-			fprintf(stderr, "failed to get controller[%d] state.\n", i);
-			free_ctrl_list_item(&item->ctrls[ccnt]);
-			continue;
-		}
-
-		ccnt++;
+		ret = get_nvme_ctrl_info(ctrls[i]->d_name, ctrl_path,
+					 &(item->ctrls[ccnt]));
+		if (!ret)
+			ccnt++;
 	}
 
 	item->nctrls = ccnt;
