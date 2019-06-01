@@ -3731,6 +3731,7 @@ static int write_zeroes(int argc, char **argv, struct command *cmd, struct plugi
 
 	struct config cfg = {
 		.start_block     = 0,
+		.namespace_id    = 0,
 		.block_count     = 0,
 		.prinfo          = 0,
 		.ref_tag         = 0,
