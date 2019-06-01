@@ -91,7 +91,7 @@ void general_help(struct plugin *plugin)
 					plugin->commands[i]->help);
 
 	printf("  %-*s %s\n", padding, "version", "Shows the program version");
-	printf("  %-*s %s\n", padding, "help", "Display this help");
+	printf("  %-*s %s\n", padding, "help", "Display the man page");
 	printf("\n");
 
 	if (plugin->name)
