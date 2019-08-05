@@ -382,42 +382,65 @@ static void show_lnvm_id20_ns(struct nvme_nvm_id20 *id, unsigned int flags)
 	int human = flags & HUMAN;
 	uint32_t mccap = (uint32_t) le32_to_cpu(id->mccap);
 
-	printf("ver_major     : %#x\n", id->mjr);
-	printf("ver_minor     : %#x\n", id->mnr);
+	printf("ver_major     : %#x %s\n", id->mjr,
+			human ? "(Major Version Number)" : "");
+	printf("ver_minor     : %#x %s\n", id->mnr,
+			human ? "(Minor Version Number)" : "");
 
-	printf("mccap         : %#x\n", mccap);
+	printf("mccap         : %#x %s\n", mccap,
+			human ? "(Media and Controller Capabilities)" : "");
 	if (human) {
 		if (mccap & (1 << LNVM_IDFY_CAP_VCOPY))
 			printf("           [0]: Vector copy support\n");
 		if (mccap & (1 << LNVM_IDFY_CAP_MRESETS))
 			printf("           [1]: Multiple resets support\n");
 	}
-	printf("wit           : %d\n", id->wit);
+	printf("wit           : %d %s\n", id->wit,
+			human ? "(Wear-level Index Delta Threshold)" : "");
 
 	printf("lba format\n");
-	printf(" grp len      : %d\n", id->lbaf.grp_len);
-	printf(" pu len       : %d\n", id->lbaf.pu_len);
-	printf(" chk len      : %d\n", id->lbaf.chk_len);
-	printf(" clba len     : %d\n", id->lbaf.lba_len);
+	printf(" grp len      : %d %s\n", id->lbaf.grp_len,
+			human ? "(Group bit length)" : "");
+	printf(" pu len       : %d %s\n", id->lbaf.pu_len,
+			human ? "(PU bit length)" : "");
+	printf(" chk len      : %d %s\n", id->lbaf.chk_len,
+			human ? "(Chunk bit length)" : "");
+	printf(" clba len     : %d %s\n", id->lbaf.lba_len,
+			human ? "(Logical block bit length)" : "");
 
 	printf("geometry\n");
-	printf(" num_grp      : %d\n", le16_to_cpu(id->num_grp));
-	printf(" num_pu       : %d\n", le16_to_cpu(id->num_pu));
-	printf(" num_chk      : %d\n", le32_to_cpu(id->num_chk));
-	printf(" clba         : %d\n", le32_to_cpu(id->clba));
+	printf(" num_grp      : %d %s\n", le16_to_cpu(id->num_grp),
+			human ? "(Number of groups)" : "");
+	printf(" num_pu       : %d %s\n", le16_to_cpu(id->num_pu),
+			human ? "(Number of parallel units per group)" : "");
+	printf(" num_chk      : %d %s\n", le32_to_cpu(id->num_chk),
+			human ? "(Number of chunks per parallel unit)" : "");
+	printf(" clba         : %d %s\n", le32_to_cpu(id->clba),
+			human ? "(Chunk Size)" : "");
 	printf("write req\n");
-	printf(" ws_min       : %d\n", le32_to_cpu(id->ws_min));
-	printf(" ws_opt       : %d\n", le32_to_cpu(id->ws_opt));
-	printf(" mw_cunits    : %d\n", le32_to_cpu(id->mw_cunits));
-	printf(" maxoc        : %d\n", le32_to_cpu(id->maxoc));
-	printf(" maxocpu      : %d\n", le32_to_cpu(id->maxocpu));
+	printf(" ws_min       : %d %s\n", le32_to_cpu(id->ws_min),
+			human ? "(Minimum Write Size)" : "");
+	printf(" ws_opt       : %d %s\n", le32_to_cpu(id->ws_opt),
+			human ? "(Optimal Write Size)" : "");
+	printf(" mw_cunits    : %d %s\n", le32_to_cpu(id->mw_cunits),
+			human ? "(Cache Minimum Write Size Units)" : "");
+	printf(" maxoc        : %d %s\n", le32_to_cpu(id->maxoc),
+			human ? "(Maximum Open Chunks)" : "");
+	printf(" maxocpu      : %d %s\n", le32_to_cpu(id->maxocpu),
+			human ? "(Maximum Open Chunks per PU)" : "");
 	printf("perf metrics\n");
-	printf(" trdt (ns)    : %d\n", le32_to_cpu(id->trdt));
-	printf(" trdm (ns)    : %d\n", le32_to_cpu(id->trdm));
-	printf(" twrt (ns)    : %d\n", le32_to_cpu(id->twrt));
-	printf(" twrm (ns)    : %d\n", le32_to_cpu(id->twrm));
-	printf(" tcrst (ns)   : %d\n", le32_to_cpu(id->tcrst));
-	printf(" tcrsm (ns)   : %d\n", le32_to_cpu(id->tcrsm));
+	printf(" trdt (ns)    : %d %s\n", le32_to_cpu(id->trdt),
+			human ? "(Typical time to read a write unit)" : "");
+	printf(" trdm (ns)    : %d %s\n", le32_to_cpu(id->trdm),
+			human ? "(Max time to read a write unit)" : "");
+	printf(" twrt (ns)    : %d %s\n", le32_to_cpu(id->twrt),
+			human ? "(Typical time to write a write unit)" : "");
+	printf(" twrm (ns)    : %d %s\n", le32_to_cpu(id->twrm),
+			human ? "(Max time to write a write unit)" : "");
+	printf(" tcrst (ns)   : %d %s\n", le32_to_cpu(id->tcrst),
+			human ? "(Typical chunk reset time)" : "");
+	printf(" tcrsm (ns)   : %d %s\n", le32_to_cpu(id->tcrsm),
+			human ? "(Max chunk reset time)" : "");
 }
 
 static void show_lnvm_id_ns(struct nvme_nvm_id *id, unsigned int flags)
