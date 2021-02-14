@@ -5109,6 +5109,7 @@ static int passthru(int argc, char **argv, int ioctl_cmd, const char *desc, stru
 		int   read;
 		int   write;
 		__u8  prefill;
+		bool  mpath;
 	};
 
 	struct config cfg = {
@@ -5129,6 +5130,7 @@ static int passthru(int argc, char **argv, int ioctl_cmd, const char *desc, stru
 		.cdw15        = 0,
 		.input_file   = "",
 		.prefill      = 0,
+		.mpath        = false,
 	};
 
 	const char *opcode = "opcode (required)";
@@ -5153,6 +5155,7 @@ static int passthru(int argc, char **argv, int ioctl_cmd, const char *desc, stru
 	const char *re = "set dataflow direction to receive";
 	const char *wr = "set dataflow direction to send";
 	const char *prefill = "prefill buffers with known byte-value, default 0";
+	const char *mpath = "multipath I/O (valid only if io-passthru)";
 
 	OPT_ARGS(opts) = {
 		OPT_BYTE("opcode",       'o', &cfg.opcode,       opcode),
@@ -5177,12 +5180,29 @@ static int passthru(int argc, char **argv, int ioctl_cmd, const char *desc, stru
 		OPT_FLAG("dry-run",      'd', &cfg.dry_run,      dry),
 		OPT_FLAG("read",         'r', &cfg.read,         re),
 		OPT_FLAG("write",        'w', &cfg.write,        wr),
+		OPT_FLAG("mpath",        'M', &cfg.mpath,        mpath),
 		OPT_END()
 	};
 
 	err = fd = parse_and_open(argc, argv, desc, opts);
 	if (fd < 0)
 		goto ret;
+
+	if (cfg.mpath) {
+		if (!cfg.namespace_id) {
+			fprintf(stderr, "mpath should be with --namespace-id\n");
+			err = -EINVAL;
+			goto close_fd;
+		}
+
+		if (!is_chardev()) {
+			fprintf(stderr, "mpath should be with chardev (e.g., /dev/nvme0)\n");
+			err = -EINVAL;
+			goto close_fd;
+		}
+
+		ioctl_cmd = NVME_IOCTL_MPATH_IO;
+	}
 
 	if (strlen(cfg.input_file)){
 		wfd = open(cfg.input_file, O_RDONLY,
